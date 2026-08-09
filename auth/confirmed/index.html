@@ -94,10 +94,11 @@
       <p class="center">Return to the Boss Your Data app and sign in with your new password.</p>
     </div>
 
-    <!-- Generic / code / error landing with self-service reset -->
-    <div id="state-generic" class="hidden">
+    <!-- Generic / code / error landing with self-service reset.
+         Visible by default so the page is never blank if scripts fail. -->
+    <div id="state-generic">
       <h1 id="generic-title">Account help</h1>
-      <p class="center" id="generic-msg"></p>
+      <p class="center" id="generic-msg">Forgotten your password? Enter your email and we'll send you a reset link.</p>
       <form id="reset-form">
         <label for="reset-email">Email address</label>
         <input id="reset-email" type="email" autocomplete="email" required>
@@ -140,15 +141,18 @@
     show("state-generic");
   }
 
-  var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { flowType: "implicit", detectSessionInUrl: true }
-  });
+  var client = null;
+  try {
+    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { flowType: "implicit", detectSessionInUrl: true }
+    });
+  } catch (e) { /* SDK failed to load — text states still work, forms will say so */ }
 
   // ---- Initial state ----
   if (urlError) {
     generic("That link did not work",
       "It's invalid or has expired. Request a fresh password reset link below.");
-  } else if (hasToken && urlType === "recovery") {
+  } else if (hasToken && urlType === "recovery" && client) {
     // Implicit-flow recovery: supabase-js picks the session out of the hash.
     show("state-recovery");
     client.auth.getUser().then(function (res) {
@@ -158,7 +162,7 @@
   } else if (hasToken || urlType === "signup" || urlType === "email_change") {
     show("state-confirmed");
     // Don't leave a session lying around in this browser.
-    client.auth.signOut();
+    if (client) client.auth.signOut();
   } else if (hasCode) {
     // PKCE link from the mobile app: only the app that requested it can use
     // this code, and email verification already happened server-side.
@@ -171,7 +175,7 @@
   }
 
   // Some flows only announce recovery via the auth event.
-  client.auth.onAuthStateChange(function (event) {
+  if (client) client.auth.onAuthStateChange(function (event) {
     if (event === "PASSWORD_RECOVERY") {
       show("state-recovery");
       client.auth.getUser().then(function (res) {
@@ -189,6 +193,11 @@
     var msg = document.getElementById("pw-msg");
     var btn = document.getElementById("pw-btn");
     msg.classList.add("hidden");
+    if (!client) {
+      msg.textContent = "Connection problem — reload the page and try again.";
+      msg.classList.remove("hidden");
+      return;
+    }
     if (pw1 !== pw2) {
       msg.textContent = "Passwords don't match.";
       msg.classList.remove("hidden");
@@ -213,6 +222,12 @@
     var email = document.getElementById("reset-email").value.trim();
     var msg = document.getElementById("reset-msg");
     var btn = document.getElementById("reset-btn");
+    if (!client) {
+      msg.textContent = "Connection problem — reload the page and try again.";
+      msg.className = "msg-err";
+      msg.classList.remove("hidden");
+      return;
+    }
     btn.disabled = true; btn.textContent = "Sending…";
     client.auth.resetPasswordForEmail(email, { redirectTo: THIS_PAGE }).then(function (res) {
       msg.classList.remove("hidden");

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Boss Your Data — Account</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #5b6472;
+    --accent: #1a56db; --accent-text: #ffffff; --border: #e3e6ea;
+    --ok: #0e9f6e; --err: #c81e1e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --card: #1a1f27; --text: #eef1f5; --muted: #9aa4b2;
+      --accent: #3f83f8; --accent-text: #0b1220; --border: #2a313c;
+      --ok: #31c48d; --err: #f98080;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: .01em; margin-bottom: 20px; }
+  .brand span { color: var(--accent); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px 24px; width: 100%; max-width: 420px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 10px; }
+  p { color: var(--muted); margin-bottom: 14px; }
+  p.ok { color: var(--ok); font-weight: 600; }
+  p.err { color: var(--err); font-weight: 600; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+  input {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); font-size: 1rem;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  button {
+    width: 100%; margin-top: 18px; padding: 12px; border: 0; border-radius: 8px;
+    background: var(--accent); color: var(--accent-text); font-size: 1rem; font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: default; }
+  .hint { font-size: .8rem; margin-top: 14px; margin-bottom: 0; }
+  .hidden { display: none; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="brand">BOSS <span>YOUR DATA</span></div>
+  <div class="card">
+
+    <!-- Email confirmed -->
+    <div id="state-confirmed" class="hidden">
+      <h1>Email confirmed ✅</h1>
+      <p>You're all set. Return to the Boss Your Data app and sign in with your email and password.</p>
+    </div>
+
+    <!-- Set a new password (we hold a recovery session) -->
+    <div id="state-recovery" class="hidden">
+      <h1>Set a new password</h1>
+      <p>Choose a new password for <strong id="recovery-email"></strong>.</p>
+      <form id="password-form">
+        <label for="pw1">New password</label>
+        <input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
+        <label for="pw2">Confirm new password</label>
+        <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+        <p id="pw-msg" class="err hidden" role="alert"></p>
+        <button id="pw-btn" type="submit">Update password</button>
+      </form>
+    </div>
+
+    <!-- Password updated -->
+    <div id="state-done" class="hidden">
+      <h1>Password updated ✅</h1>
+      <p>Return to the Boss Your Data app and sign in with your new password.</p>
+    </div>
+
+    <!-- Generic / code / error landing with self-service reset -->
+    <div id="state-generic" class="hidden">
+      <h1 id="generic-title">Account help</h1>
+      <p id="generic-msg"></p>
+      <form id="reset-form">
+        <label for="reset-email">Email address</label>
+        <input id="reset-email" type="email" autocomplete="email" required>
+        <p id="reset-msg" class="hidden" role="alert"></p>
+        <button id="reset-btn" type="submit">Send password reset link</button>
+      </form>
+      <p class="hint">Just confirmed your email? Simply return to the app and sign in.
+        Need help? <a href="https://www.bossyourdata.com">bossyourdata.com</a></p>
+    </div>
+
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  var SUPABASE_URL = "https://rwbtdokavulbzwhcrmlc.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_65qJCzWXXe455nFeGVksfA_-UYIVKiV";
+  var THIS_PAGE = "https://app.bossyourdata.com/auth/confirmed/";
+
+  // Capture URL state BEFORE supabase-js consumes/strips the hash.
+  var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+  var query = new URLSearchParams(location.search);
+  var urlType = hash.get("type") || query.get("type");
+  var urlError = hash.get("error_description") || query.get("error_description") ||
+                 hash.get("error") || query.get("error");
+  var hasCode = query.has("code");
+  var hasToken = hash.has("access_token");
+
+  function show(id) {
+    ["state-confirmed", "state-recovery", "state-done", "state-generic"].forEach(function (s) {
+      document.getElementById(s).classList.toggle("hidden", s !== id);
+    });
+  }
+  function generic(title, msg, isError) {
+    document.getElementById("generic-title").textContent = title;
+    var m = document.getElementById("generic-msg");
+    m.textContent = msg;
+    m.className = isError ? "err" : "";
+    show("state-generic");
+  }
+
+  var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { flowType: "implicit", detectSessionInUrl: true }
+  });
+
+  // ---- Initial state ----
+  if (urlError) {
+    generic("Link expired",
+      "That link is invalid or has expired. Request a fresh password reset link below.", true);
+  } else if (hasToken && urlType === "recovery") {
+    // Implicit-flow recovery: supabase-js picks the session out of the hash.
+    show("state-recovery");
+    client.auth.getUser().then(function (res) {
+      var email = res.data && res.data.user ? res.data.user.email : "";
+      document.getElementById("recovery-email").textContent = email || "your account";
+    });
+  } else if (hasToken || urlType === "signup" || urlType === "email_change") {
+    show("state-confirmed");
+    // Don't leave a session lying around in this browser.
+    client.auth.signOut();
+  } else if (hasCode) {
+    // PKCE link from the mobile app: only the app that requested it can use
+    // this code, and email verification already happened server-side.
+    generic("You're verified",
+      "If you were confirming your email, you're all set — return to the app and sign in. " +
+      "Resetting your password? Request a fresh link below and finish here.");
+  } else {
+    generic("Account help",
+      "Forgotten your password? Enter your email and we'll send you a reset link.");
+  }
+
+  // Some flows only announce recovery via the auth event.
+  client.auth.onAuthStateChange(function (event) {
+    if (event === "PASSWORD_RECOVERY") {
+      show("state-recovery");
+      client.auth.getUser().then(function (res) {
+        var email = res.data && res.data.user ? res.data.user.email : "";
+        document.getElementById("recovery-email").textContent = email || "your account";
+      });
+    }
+  });
+
+  // ---- Set-new-password form ----
+  document.getElementById("password-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pw1 = document.getElementById("pw1").value;
+    var pw2 = document.getElementById("pw2").value;
+    var msg = document.getElementById("pw-msg");
+    var btn = document.getElementById("pw-btn");
+    msg.classList.add("hidden");
+    if (pw1 !== pw2) {
+      msg.textContent = "Passwords don't match.";
+      msg.classList.remove("hidden");
+      return;
+    }
+    btn.disabled = true; btn.textContent = "Updating…";
+    client.auth.updateUser({ password: pw1 }).then(function (res) {
+      if (res.error) {
+        msg.textContent = res.error.message;
+        msg.classList.remove("hidden");
+        btn.disabled = false; btn.textContent = "Update password";
+      } else {
+        client.auth.signOut();
+        show("state-done");
+      }
+    });
+  });
+
+  // ---- Request-reset form ----
+  document.getElementById("reset-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("reset-email").value.trim();
+    var msg = document.getElementById("reset-msg");
+    var btn = document.getElementById("reset-btn");
+    btn.disabled = true; btn.textContent = "Sending…";
+    client.auth.resetPasswordForEmail(email, { redirectTo: THIS_PAGE }).then(function (res) {
+      msg.classList.remove("hidden");
+      if (res.error) {
+        msg.textContent = res.error.message;
+        msg.className = "err";
+        btn.disabled = false; btn.textContent = "Send password reset link";
+      } else {
+        msg.textContent = "Sent — check your inbox and open the link on this device.";
+        msg.className = "ok";
+        btn.textContent = "Link sent";
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

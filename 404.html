@@ -1,103 +1,117 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Boss Your Data — Account</title>
+<title>Account — Boss Your Data</title>
 <style>
   :root {
-    --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #5b6472;
-    --accent: #1a56db; --accent-text: #ffffff; --border: #e3e6ea;
-    --ok: #0e9f6e; --err: #c81e1e;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #101318; --card: #1a1f27; --text: #eef1f5; --muted: #9aa4b2;
-      --accent: #3f83f8; --accent-text: #0b1220; --border: #2a313c;
-      --ok: #31c48d; --err: #f98080;
-    }
+    --old-lace: #FFF8EA; --surface: #FFFDF8; --obsidian: #1B1A17;
+    --ink-60: rgba(17,17,17,0.6); --reddish-brown: #9A422B;
+    --pine: #3E5E4D; --etched: #E2DEDA; --warm: #FCF4E4; --warm-border: #EAD9BE;
   }
   * { box-sizing: border-box; margin: 0; }
   body {
-    background: var(--bg); color: var(--text);
-    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    min-height: 100vh; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 24px;
+    background: var(--old-lace); color: var(--obsidian);
+    font: 400 16px/1.6 Georgia, 'Times New Roman', serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: .01em; margin-bottom: 20px; }
-  .brand span { color: var(--accent); }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 72px 24px 80px; text-align: center; }
+  .wordmark { font: 700 20px 'Times New Roman', serif; }
+  .tag {
+    font: 600 8px ui-monospace, monospace; letter-spacing: 0.17em;
+    text-transform: uppercase; color: var(--reddish-brown); margin-left: 8px;
+  }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 28px 24px; width: 100%; max-width: 420px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    background: var(--surface); border: 1px solid var(--etched); border-radius: 16px;
+    padding: 34px 28px; margin-top: 36px; text-align: left;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -12px rgba(0,0,0,0.14);
   }
-  h1 { font-size: 1.25rem; margin-bottom: 10px; }
-  p { color: var(--muted); margin-bottom: 14px; }
-  p.ok { color: var(--ok); font-weight: 600; }
-  p.err { color: var(--err); font-weight: 600; }
-  label { display: block; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+  .mark { font-size: 34px; line-height: 1; text-align: center; color: var(--pine); }
+  h1 { font: 700 26px/1.25 Georgia, serif; margin: 14px 0 10px; text-align: center; }
+  p { color: var(--ink-60); margin-bottom: 10px; }
+  p.center { text-align: center; }
+  label {
+    display: block; font: 600 11px ui-monospace, monospace; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--obsidian); margin: 18px 0 7px;
+  }
   input {
-    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--bg); color: var(--text); font-size: 1rem;
+    width: 100%; padding: 12px 13px; border: 1px solid var(--etched); border-radius: 10px;
+    background: var(--old-lace); color: var(--obsidian);
+    font: 400 16px Georgia, serif;
   }
-  input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  input:focus { outline: none; border-color: var(--reddish-brown); box-shadow: 0 0 0 3px rgba(154,66,43,0.15); }
   button {
-    width: 100%; margin-top: 18px; padding: 12px; border: 0; border-radius: 8px;
-    background: var(--accent); color: var(--accent-text); font-size: 1rem; font-weight: 700;
-    cursor: pointer;
+    width: 100%; margin-top: 22px; padding: 13px; border: 0; border-radius: 10px;
+    background: var(--reddish-brown); color: var(--old-lace);
+    font: 700 16px Georgia, serif; cursor: pointer;
   }
-  button:disabled { opacity: .55; cursor: default; }
-  .hint { font-size: .8rem; margin-top: 14px; margin-bottom: 0; }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .55; cursor: default; filter: none; }
+  .note {
+    background: var(--warm); border: 1px solid var(--warm-border);
+    border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px;
+  }
+  .msg-ok { color: var(--pine); font-weight: 700; margin-top: 14px; }
+  .msg-err { color: var(--reddish-brown); font-weight: 700; margin-top: 14px; }
   .hidden { display: none; }
-  a { color: var(--accent); }
+  footer { margin-top: 40px; font-size: 13.5px; color: var(--ink-60); }
+  a { color: var(--reddish-brown); }
 </style>
 </head>
 <body>
-  <div class="brand">BOSS <span>YOUR DATA</span></div>
+<div class="wrap">
+  <div><span class="wordmark">Boss Your Data</span><span class="tag">Life Sciences</span></div>
+
   <div class="card">
 
     <!-- Email confirmed -->
     <div id="state-confirmed" class="hidden">
-      <h1>Email confirmed ✅</h1>
-      <p>You're all set. Return to the Boss Your Data app and sign in with your email and password.</p>
+      <div class="mark">✓</div>
+      <h1>Email confirmed</h1>
+      <p class="center">You're all set. Return to the Boss Your Data app and sign in with your email and password.</p>
     </div>
 
     <!-- Set a new password (we hold a recovery session) -->
     <div id="state-recovery" class="hidden">
       <h1>Set a new password</h1>
-      <p>Choose a new password for <strong id="recovery-email"></strong>.</p>
+      <p class="center">Choose a new password for <strong id="recovery-email"></strong>.</p>
       <form id="password-form">
         <label for="pw1">New password</label>
         <input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
         <label for="pw2">Confirm new password</label>
         <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
-        <p id="pw-msg" class="err hidden" role="alert"></p>
+        <p id="pw-msg" class="msg-err hidden" role="alert"></p>
         <button id="pw-btn" type="submit">Update password</button>
       </form>
     </div>
 
     <!-- Password updated -->
     <div id="state-done" class="hidden">
-      <h1>Password updated ✅</h1>
-      <p>Return to the Boss Your Data app and sign in with your new password.</p>
+      <div class="mark">✓</div>
+      <h1>Password updated</h1>
+      <p class="center">Return to the Boss Your Data app and sign in with your new password.</p>
     </div>
 
     <!-- Generic / code / error landing with self-service reset -->
     <div id="state-generic" class="hidden">
       <h1 id="generic-title">Account help</h1>
-      <p id="generic-msg"></p>
+      <p class="center" id="generic-msg"></p>
       <form id="reset-form">
         <label for="reset-email">Email address</label>
         <input id="reset-email" type="email" autocomplete="email" required>
         <p id="reset-msg" class="hidden" role="alert"></p>
         <button id="reset-btn" type="submit">Send password reset link</button>
       </form>
-      <p class="hint">Just confirmed your email? Simply return to the app and sign in.
-        Need help? <a href="https://www.bossyourdata.com">bossyourdata.com</a></p>
+      <div class="note">Just confirmed your email? Simply return to the app and sign in.
+        Links expire after a short time and can only be used once.</div>
     </div>
 
   </div>
+
+  <footer>© 2026 Boss Your Data · <a href="https://www.bossyourdata.com">bossyourdata.com</a></footer>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -120,11 +134,9 @@
       document.getElementById(s).classList.toggle("hidden", s !== id);
     });
   }
-  function generic(title, msg, isError) {
+  function generic(title, msg) {
     document.getElementById("generic-title").textContent = title;
-    var m = document.getElementById("generic-msg");
-    m.textContent = msg;
-    m.className = isError ? "err" : "";
+    document.getElementById("generic-msg").textContent = msg;
     show("state-generic");
   }
 
@@ -134,8 +146,8 @@
 
   // ---- Initial state ----
   if (urlError) {
-    generic("Link expired",
-      "That link is invalid or has expired. Request a fresh password reset link below.", true);
+    generic("That link did not work",
+      "It's invalid or has expired. Request a fresh password reset link below.");
   } else if (hasToken && urlType === "recovery") {
     // Implicit-flow recovery: supabase-js picks the session out of the hash.
     show("state-recovery");
@@ -206,11 +218,11 @@
       msg.classList.remove("hidden");
       if (res.error) {
         msg.textContent = res.error.message;
-        msg.className = "err";
+        msg.className = "msg-err";
         btn.disabled = false; btn.textContent = "Send password reset link";
       } else {
         msg.textContent = "Sent — check your inbox and open the link on this device.";
-        msg.className = "ok";
+        msg.className = "msg-ok";
         btn.textContent = "Link sent";
       }
     });

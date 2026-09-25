@@ -73,10 +73,19 @@
       <p class="center">You're all set. Return to the Boss Your Data app and sign in with your email and password.</p>
     </div>
 
-    <!-- Set a new password (we hold a recovery session) -->
+    <!-- Confirming a token-hash link, or a confirmation link that failed.
+         No reset form here: someone confirming a new account should not be
+         offered a password reset. -->
+    <div id="state-message" class="hidden">
+      <h1 id="message-title"></h1>
+      <p class="center" id="message-text"></p>
+    </div>
+
+    <!-- Set a new password (a recovery session, or a token-hash link that is
+         verified when the form is submitted) -->
     <div id="state-recovery" class="hidden">
       <h1>Set a new password</h1>
-      <p class="center">Choose a new password for <strong id="recovery-email"></strong>.</p>
+      <p class="center">Choose a new password for <strong id="recovery-email">your account</strong>.</p>
       <form id="password-form">
         <label for="pw1">New password</label>
         <input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
@@ -129,9 +138,19 @@
                  hash.get("error") || query.get("error");
   var hasCode = query.has("code");
   var hasToken = hash.has("access_token");
+  // Token-hash links. BYD_Pharma's Confirm signup and Reset password email
+  // templates send ?token_hash={{ .TokenHash }}&type=email|recovery here
+  // (instead of {{ .ConfirmationURL }}) when the request's redirect is this
+  // page. Nothing is verified until this page calls verifyOtp, so it works
+  // for the apps' PKCE requests — whose ?code= only the requesting app can
+  // redeem — and a mail scanner that prefetches the link cannot use it up.
+  var tokenHash = query.get("token_hash");
+  // Recovery hashes are verified on submit, so the link survives until the
+  // person actually sets a password.
+  var pendingRecoveryHash = null;
 
   function show(id) {
-    ["state-confirmed", "state-recovery", "state-done", "state-generic"].forEach(function (s) {
+    ["state-message", "state-confirmed", "state-recovery", "state-done", "state-generic"].forEach(function (s) {
       document.getElementById(s).classList.toggle("hidden", s !== id);
     });
   }
@@ -139,6 +158,30 @@
     document.getElementById("generic-title").textContent = title;
     document.getElementById("generic-msg").textContent = msg;
     show("state-generic");
+  }
+  function message(title, text) {
+    document.getElementById("message-title").textContent = title;
+    document.getElementById("message-text").textContent = text;
+    show("state-message");
+  }
+  // The token is single-use — keep it out of history once it is spent.
+  function forgetUrl() {
+    history.replaceState(null, "", location.pathname);
+  }
+  // Network trouble, as opposed to a bad or used link: the link may still be
+  // good, so the URL is kept and a reload retries.
+  function isConnectionError(err) {
+    return err.name === "AuthRetryableFetchError" || !err.status;
+  }
+  function connectionProblem() {
+    message("Something went wrong",
+      "We couldn't reach Boss Your Data. Check your connection and reload this page.");
+  }
+  function confirmFailed() {
+    message("That link did not work",
+      "It may have expired or already been used. If you have already confirmed your email, " +
+      "just sign in in the Boss Your Data app. Otherwise open the app and tap " +
+      "Resend confirmation email.");
   }
 
   var client = null;
@@ -152,6 +195,26 @@
   if (urlError) {
     generic("That link did not work",
       "It's invalid or has expired. Request a fresh password reset link below.");
+  } else if (tokenHash && urlType === "recovery") {
+    pendingRecoveryHash = tokenHash;
+    show("state-recovery");
+  } else if (tokenHash) {
+    // Sign-up (or email change) confirmation.
+    if (!client) {
+      connectionProblem();
+    } else {
+      message("Confirming your email…", "This only takes a moment.");
+      var otpType = ["signup", "invite", "magiclink", "email_change", "email"].indexOf(urlType) >= 0
+        ? urlType : "email";
+      client.auth.verifyOtp({ token_hash: tokenHash, type: otpType }).then(function (res) {
+        if (res.error && isConnectionError(res.error)) { connectionProblem(); return; }
+        forgetUrl();
+        if (res.error) { confirmFailed(); return; }
+        show("state-confirmed");
+        // Don't leave a session lying around in this browser.
+        client.auth.signOut();
+      }, connectionProblem);
+    }
   } else if (hasToken && urlType === "recovery" && client) {
     // Implicit-flow recovery: supabase-js picks the session out of the hash.
     show("state-recovery");
@@ -164,8 +227,9 @@
     // Don't leave a session lying around in this browser.
     if (client) client.auth.signOut();
   } else if (hasCode) {
-    // PKCE link from the mobile app: only the app that requested it can use
-    // this code, and email verification already happened server-side.
+    // PKCE link from the mobile app, sent before the email templates moved
+    // to token-hash links: only the app that requested it can use this
+    // code, and email verification already happened server-side.
     generic("You're verified",
       "If you were confirming your email, you're all set — return to the app and sign in. " +
       "Resetting your password? Request a fresh link below and finish here.");
@@ -204,15 +268,40 @@
       return;
     }
     btn.disabled = true; btn.textContent = "Updating…";
-    client.auth.updateUser({ password: pw1 }).then(function (res) {
-      if (res.error) {
-        msg.textContent = res.error.message;
-        msg.classList.remove("hidden");
-        btn.disabled = false; btn.textContent = "Update password";
-      } else {
-        client.auth.signOut();
-        show("state-done");
+    function fail(text) {
+      msg.textContent = text;
+      msg.classList.remove("hidden");
+      btn.disabled = false; btn.textContent = "Update password";
+    }
+    // A token-hash link becomes a recovery session only now; once it has,
+    // a retry (say, after a rejected password) goes straight to the update.
+    var session = pendingRecoveryHash
+      ? client.auth.verifyOtp({ token_hash: pendingRecoveryHash, type: "recovery" })
+      : Promise.resolve({ error: null });
+    session.then(function (res) {
+      if (res.error && isConnectionError(res.error)) {
+        fail("Connection problem — check your connection and try again.");
+        return;
       }
+      if (res.error) {
+        forgetUrl();
+        pendingRecoveryHash = null;
+        btn.disabled = false; btn.textContent = "Update password";
+        generic("That link did not work",
+          "It may have expired or already been used. Request a fresh password reset link below.");
+        return;
+      }
+      if (pendingRecoveryHash) { forgetUrl(); pendingRecoveryHash = null; }
+      client.auth.updateUser({ password: pw1 }).then(function (res) {
+        if (res.error) {
+          fail(res.error.message);
+        } else {
+          client.auth.signOut();
+          show("state-done");
+        }
+      });
+    }, function () {
+      fail("Connection problem — check your connection and try again.");
     });
   });
 

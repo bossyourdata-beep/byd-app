@@ -236,8 +236,9 @@
         forgetUrl();
         if (res.error) { confirmFailed(); return; }
         show("state-confirmed");
-        // Don't leave a session lying around in this browser.
-        client.auth.signOut();
+        // Don't leave a session lying around in this browser ("local": the
+        // default, global, would also revoke the user's Claude/ChatGPT connector session).
+        client.auth.signOut({ scope: "local" });
       }, connectionProblem);
     }
   } else if (hasToken && urlType === "recovery" && client) {
@@ -250,7 +251,7 @@
   } else if (hasToken || urlType === "signup" || urlType === "email_change") {
     show("state-confirmed");
     // Don't leave a session lying around in this browser.
-    if (client) client.auth.signOut();
+    if (client) client.auth.signOut({ scope: "local" });
   } else if (hasCode) {
     // PKCE link from the mobile app, sent before the email templates moved
     // to token-hash links: only the app that requested it can use this

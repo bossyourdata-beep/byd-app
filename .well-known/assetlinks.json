@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bossyourdata.app",
+      "sha256_cert_fingerprints": [
+        "E0:ED:C0:3A:96:4F:F0:C5:2D:CE:B0:E2:9B:7D:AC:FD:2B:A7:90:FA:32:AB:C1:DF:E8:44:04:DF:61:79:F2:1B",
+        "DF:C0:02:5F:2B:DD:F5:74:E2:95:FC:76:D5:13:0B:C6:A6:5F:9D:AF:EB:77:FC:E0:1B:E5:9E:D3:E1:DB:56:E5",
+        "33:44:CA:ED:90:D3:5A:7C:2B:5B:BC:01:07:43:1D:53:8B:6B:05:67:E2:8B:7E:FA:BB:41:99:8F:0D:84:2F:E2"
+      ]
+    }
+  }
+]

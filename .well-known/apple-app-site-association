@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["ANMVGFUUS3.com.bossyourdata.app"],
+        "components": [
+          {
+            "/": "/auth/confirmed/*",
+            "?": { "token_hash": "?*" },
+            "comment": "Sign-up confirmation and password-reset email links open the iPhone app. Only links that carry a token: anything else stays on this page."
+          },
+          {
+            "/": "/auth/confirmed",
+            "?": { "token_hash": "?*" }
+          }
+        ]
+      }
+    ]
+  }
+}

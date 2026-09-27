@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<!-- Safari on iPhone shows a banner with an Open button when the app is
+     installed (Get when it isn't). Works for every app version, unlike a
+     custom URL scheme, which errors on versions that don't register it. -->
+<meta name="apple-itunes-app" content="app-id=6795463806">
 <title>Account — Boss Your Data</title>
 <style>
   :root {
@@ -49,6 +53,15 @@
   }
   button:hover { filter: brightness(1.08); }
   button:disabled { opacity: .55; cursor: default; filter: none; }
+  /* "Open the app" — a link styled as the page's button. Android only; see
+     the script. */
+  a.btn {
+    display: block; margin-top: 22px; padding: 13px; border-radius: 10px;
+    background: var(--reddish-brown); color: var(--old-lace);
+    font: 700 16px Georgia, serif; text-align: center; text-decoration: none;
+  }
+  a.btn:hover { filter: brightness(1.08); }
+  a.btn.hidden { display: none; } /* a.btn outranks .hidden */
   /* Show/hide password: the eye inside the field, as in the app. */
   .pw-wrap { position: relative; }
   .pw-wrap input { padding-right: 48px; }
@@ -83,7 +96,8 @@
     <div id="state-confirmed" class="hidden">
       <div class="mark">✓</div>
       <h1>Email confirmed</h1>
-      <p class="center">You're all set. Return to the Boss Your Data app and sign in with your email and password.</p>
+      <p class="center">You're all set. Return to the Boss Your Data app — it signs you in when you get back. If it asks, sign in with your email and password.</p>
+      <a class="btn open-app hidden" href="#">Open the app</a>
     </div>
 
     <!-- Confirming a token-hash link, or a confirmation link that failed.
@@ -126,6 +140,7 @@
       <div class="mark">✓</div>
       <h1>Password updated</h1>
       <p class="center">Return to the Boss Your Data app and sign in with your new password.</p>
+      <a class="btn open-app hidden" href="#">Open the app</a>
     </div>
 
     <!-- Generic / code / error landing with self-service reset.
@@ -274,6 +289,21 @@
       });
     }
   });
+
+  // ---- Open the app (Android) ----
+  // With the app installed this reaches its LinkActivity, which just brings
+  // it forward (no token in the link); without it, or on a version too old to
+  // take links, Chrome goes to the Play listing, whose Open button still
+  // works. iPhone gets Safari's Smart App Banner instead (see <head>).
+  if (/Android/i.test(navigator.userAgent)) {
+    var openApp = "intent://app.bossyourdata.com/auth/confirmed/#Intent;scheme=https;" +
+      "package=com.bossyourdata.app;S.browser_fallback_url=" +
+      encodeURIComponent("https://play.google.com/store/apps/details?id=com.bossyourdata.app") + ";end";
+    Array.prototype.forEach.call(document.querySelectorAll(".open-app"), function (a) {
+      a.href = openApp;
+      a.classList.remove("hidden");
+    });
+  }
 
   // ---- Show/hide password ----
   Array.prototype.forEach.call(document.querySelectorAll(".pw-toggle"), function (btn) {
